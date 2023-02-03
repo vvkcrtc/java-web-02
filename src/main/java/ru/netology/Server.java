@@ -47,24 +47,41 @@ public class Server {
 
             while (true) {
                 final var requestLine = in.readLine();
+
                 if (requestLine == null) {
-                    break;
-                    //continue;
+                    continue;
                 }
 
+                final var parts = requestLine.split(" ");
+                if(parts.length != 3) {
+                    continue;
+                }
                 Request request = new Request(requestLine);
+                request.getQueryParams()
+                        .stream()
+                        .forEach(System.out::println);
+
+
+                request.getQueryParam("value").forEach(System.out::println);
+
+                request.getQueryParam("last").forEach(System.out::println);
+
+                System.out.println(Thread.currentThread().getName() + "received a request " + requestLine );
+
+
+
                 var methodMap = handlers.get(request.getMethod());
-                if (methodMap == null) {
+                if (methodMap != null) {
+                    Handler handler = methodMap.get(request.getResourcePath());
+                    if (handler != null) {
+                        handler.handle(request, out);
+                    } else {
+                        sendError(out);
+                    }
+                } else {
                     sendError(out);
-                    return;
                 }
 
-                Handler handler = methodMap.get(request.getResourcePath());
-                if (handler == null) {
-                    sendError(out);
-                    return;
-                }
-                handler.handle(request, out);
             }
 
 
@@ -96,11 +113,11 @@ public class Server {
                 while (true) {
 
                     Socket client = server.accept();
-/*
-                System.out.println("New client connected"
+
+                    System.out.println("New client connected "
                         + client.getInetAddress()
                         .getHostAddress());
-*/
+
                     executorService.execute(() -> handle(client));
 
                 }

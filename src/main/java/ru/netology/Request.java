@@ -5,6 +5,7 @@ import org.apache.http.client.utils.URLEncodedUtils;
 
 import java.net.URI;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class Request {
     private final String requestLine;
@@ -36,11 +37,12 @@ public class Request {
         return queryParams;
     }
 
-    public String getQueryParam(String name) {
+    public List<NameValuePair> getQueryParam(String name) {
         return queryParams.stream()
                 .filter(p -> p.getName().equals(name))
-                .map(p -> p.getValue())
-                .findFirst().get();
+//                .map(p -> p.getValue())
+//                .findFirst().get();
+                .collect(Collectors.toList());
     }
 
 }
