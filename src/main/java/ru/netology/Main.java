@@ -1,11 +1,11 @@
 package ru.netology;
 
-import java.io.BufferedOutputStream;
+
 import java.io.IOException;
 import java.util.List;
 
 public class Main {
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args)  {
         final var validPaths = List.of(
                 "/index.html",
                 "/spring.svg",
