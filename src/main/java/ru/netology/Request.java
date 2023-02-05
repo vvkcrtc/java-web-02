@@ -25,6 +25,7 @@ public class Request {
         this.queryParams = URLEncodedUtils.parse(uri, "UTF-8");
 
     }
+
     public String getMethod() {
         return method;
     }
@@ -40,8 +41,6 @@ public class Request {
     public List<NameValuePair> getQueryParam(String name) {
         return queryParams.stream()
                 .filter(p -> p.getName().equals(name))
-//                .map(p -> p.getValue())
-//                .findFirst().get();
                 .collect(Collectors.toList());
     }
 

@@ -35,14 +35,14 @@ public class Server {
     }
 
     public void addHandler(String method, String path, Handler handler) {
-        handlers.putIfAbsent(method, new ConcurrentHashMap<>());
-        ConcurrentHashMap<String, Handler> methodMap = handlers.get(method);
+        ConcurrentHashMap<String, Handler> methodMap = new ConcurrentHashMap<>();
         methodMap.put(path, handler);
+        handlers.putIfAbsent(method, methodMap);
     }
 
 
     public void handle(Socket clientSocket) {
-        try( final var out = new BufferedOutputStream(clientSocket.getOutputStream());
+        try (final var out = new BufferedOutputStream(clientSocket.getOutputStream());
              final var in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()))) {
 
             while (true) {
@@ -53,7 +53,7 @@ public class Server {
                 }
 
                 final var parts = requestLine.split(" ");
-                if(parts.length != 3) {
+                if (parts.length != 3) {
                     continue;
                 }
                 Request request = new Request(requestLine);
@@ -66,8 +66,7 @@ public class Server {
 
                 request.getQueryParam("last").forEach(System.out::println);
 
-                System.out.println(Thread.currentThread().getName() + "received a request " + requestLine );
-
+                System.out.println(Thread.currentThread().getName() + "received a request " + requestLine);
 
 
                 var methodMap = handlers.get(request.getMethod());
@@ -85,55 +84,26 @@ public class Server {
             }
 
 
-            } catch (IOException e) {
-                e.printStackTrace();
-            } finally {
-                try {
-                    if (out != null) {
-                        out.close();
-                    }
-                    if (in != null) {
-                        in.close();
-                        clientSocket.close();
-                    }
-                } catch (IOException e) {
-                    e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                if (out != null) {
+                    out.close();
                 }
-
-            }
-        }
-
-
-        public void start() {
-            try (final var server = new ServerSocket(serverPort)) {
-                server.setReuseAddress(true);
-
-                ExecutorService executorService = Executors.newFixedThreadPool(64);
-
-                while (true) {
-
-                    Socket client = server.accept();
-
-                    System.out.println("New client connected "
-                        + client.getInetAddress()
-                        .getHostAddress());
-
-                    executorService.execute(() -> handle(client));
-
+                if (in != null) {
+                    in.close();
+                    clientSocket.close();
                 }
             } catch (IOException e) {
                 e.printStackTrace();
             }
+
         }
+    }
 
-
-
-
-    /*
-    public void run() throws IOException {
-
-        try {
-            server = new ServerSocket(serverPort);
+    public void start() {
+        try (final var server = new ServerSocket(serverPort)) {
             server.setReuseAddress(true);
 
             ExecutorService executorService = Executors.newFixedThreadPool(64);
@@ -141,173 +111,17 @@ public class Server {
             while (true) {
 
                 Socket client = server.accept();
-                executorService.execute(new ClientHandler(client));
+
+                System.out.println("New client connected "
+                        + client.getInetAddress()
+                        .getHostAddress());
+
+                executorService.execute(() -> handle(client));
 
             }
         } catch (IOException e) {
             e.printStackTrace();
-        } finally {
-            if (server != null) {
-                try {
-                    server.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
         }
     }
-
-
-    private static class ClientHandler implements Runnable {
-        private final Socket clientSocket;
-
-
-        public ClientHandler(Socket socket) {
-            this.clientSocket = socket;
-        }
-
-        protected static void sendError(BufferedOutputStream out) throws IOException {
-                out.write((
-                        "HTTP/1.1 404 Not Found\r\n" +
-                                "Content-Length: 0\r\n" +
-                                "Connection: close\r\n" +
-                                "\r\n"
-                ).getBytes());
-                out.flush();
-        }
-
-        protected static void sendClassic(BufferedOutputStream out, Path filePath, String mimeType) throws IOException {
-            final var template = Files.readString(filePath);
-            final var content = template.replace(
-                    "{time}",
-                    LocalDateTime.now().toString()
-            ).getBytes();
-            out.write((
-                    "HTTP/1.1 200 OK\r\n" +
-                            "Content-Type: " + mimeType + "\r\n" +
-                            "Content-Length: " + content.length + "\r\n" +
-                            "Connection: close\r\n" +
-                            "\r\n"
-            ).getBytes());
-            out.write(content);
-            out.flush();
-        }
-
-        protected static void sendFile(BufferedOutputStream out, Path filePath, String mimeType) throws IOException {
-            final var length = Files.size(filePath);
-            out.write((
-                    "HTTP/1.1 200 OK\r\n" +
-                            "Content-Type: " + mimeType + "\r\n" +
-                            "Content-Length: " + length + "\r\n" +
-                            "Connection: close\r\n" +
-                            "\r\n"
-            ).getBytes());
-            Files.copy(filePath, out);
-            out.flush();
-
-        }
-
-        public void handle(Socket client) {
-            try( final var out = new BufferedOutputStream(clientSocket.getOutputStream());
-                 final var in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()))) {
-
-                while (true) {
-                    final var requestLine = in.readLine();
-                    if (requestLine == null) {
-                        break;
-                        //continue;
-                    }
-
-                    Request request = new Request(requestLine);
-                    var methodMap = handlers.get(request.getMethod());
-                    if(methodMap == null) {
-                        sendError(out);
-                        return;
-                    }
-
-                    var handler =  methodMap.get(request.getResourcePath());
-                    if(handler == null) {
-                        sendError(out);
-                        return;
-                    }
-
-
-            } catch (IOException e) {
-                e.printStackTrace();
-            } finally {
-                try {
-                    if (out != null) {
-                        out.close();
-                    }
-                    if (in != null) {
-                        in.close();
-                        clientSocket.close();
-                    }
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-
-        }
-        */
-
-
-
-  /*      public void run() {
-            BufferedOutputStream out = null;
-            BufferedReader in = null;
-            try {
-
-                out = new BufferedOutputStream(clientSocket.getOutputStream());
-                in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
-
-
-
-
-                while (true) {
-                    final var requestLine = in.readLine();
-                    if (requestLine == null) {
-                        break;
-                        //continue;
-                    }
-
-                    Request request = new Request(requestLine);
-                    var methodMap = handlers.get(request.getMethod());
-                    if(methodMap == null) {
-                        sendError(out);
-                        return;
-                    }
-
-                    var handler =  methodMap.get(request.getResourcePath());
-                    if(handler == null) {
-                        sendError(out);
-                        return;
-                    }
-                    try {
-                       // handler.handle(request, out);
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-
-
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
-            } finally {
-                try {
-                    if (out != null) {
-                        out.close();
-                    }
-                    if (in != null) {
-                        in.close();
-                        clientSocket.close();
-                    }
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-
-   */
-
 
 }
